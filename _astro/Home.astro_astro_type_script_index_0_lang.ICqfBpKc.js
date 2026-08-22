@@ -1,0 +1,1 @@
+import{t as n}from"./analytics.Casmqzt3.js";function e(){const t=(()=>{try{return localStorage.getItem("fp_ab_hero_v1")||"control"}catch{return"control"}})();n("hero_variant_viewed",{variant:t})}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",e):e();window.addEventListener("finansprotect:consent-accepted",e);

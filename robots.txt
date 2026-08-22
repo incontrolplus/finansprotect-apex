@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-Sitemap: https://finansova-zashtita.bg/sitemap-index.xml
+
+Sitemap: https://finansprotect.com/sitemap-index.xml
