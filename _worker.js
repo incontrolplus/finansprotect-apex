@@ -173,17 +173,20 @@ export default {
 
           const geminiApiKey = env.GEMINI_API_KEY || "AIzaSyCjXAkJaMWgFrIST3so_VjppaiB0BOjE2c";
           const extractionPrompt = `You are an expert Bulgarian document extraction engine.
-Examine this image containing an invoice document.
+Analyze this image containing an invoice and/or cash receipt.
 CRITICAL INSTRUCTIONS:
-1. Extract authentic visible fields:
-   - Buyer / Customer (Получател: Company/Person name, EIK/BULSTAT, VAT, Address, City).
-   - Supplier / Vendor (Доставчик: Company name, EIK, VAT, Address).
-   - Document Numbers: invoiceNumber, invoiceDate (YYYY-MM-DD), dueDate.
-   - Payment: IBAN, Bank.
-   - Line Items: Read the exact service or goods descriptions printed on the invoice table or receipt (e.g. 'Услуга: абонаментно обслужване...').
-   - Totals: subtotal, taxAmount (ДДС), totalAmount, currency.
-2. STRICT ZERO-HALLUCINATION: If a field is illegible or not present, set it to null and items to []. NEVER invent dresses, pants, or dummy placeholder numbers.
-3. Return valid JSON.
+1. Vendor / Supplier (Доставчик / Издател):
+   - If a receipt from a brand/store is attached (e.g. TERRANOVA), vendorName is 'TERRANOVA'.
+   - Extract EIK / Булстат printed on the receipt or invoice (e.g. 201391518).
+2. Customer / Buyer (Получател):
+   - Look at the recipient box on the invoice (e.g. 'ОПА БИЛД ЕООД', EIK: '207769163', VAT: 'BG207769163', Address).
+3. Document numbers & dates:
+   - Extract invoiceNumber, invoiceDate (YYYY-MM-DD), dueDate.
+4. Total amount & currency:
+   - Extract the total amount printed (e.g. 10.00, 63.92, 120.00) and currency (BGN, EUR).
+5. Line items:
+   - Extract item or service descriptions from the invoice table or receipt (e.g. 'Услуги/обслужване в 10.2025г.-12.2025г.').
+6. Return a single JSON object.
 
 Schema:
 {
@@ -229,7 +232,8 @@ Schema:
               }],
               generationConfig: {
                 responseMimeType: 'application/json',
-                temperature: 0.0
+                temperature: 0.0,
+                maxOutputTokens: 1024
               }
             })
           });
@@ -242,6 +246,9 @@ Schema:
           const geminiData = await geminiResp.json();
           const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
           let parsed = JSON.parse(rawText);
+          if (Array.isArray(parsed)) {
+            parsed = parsed[0] || {};
+          }
 
           // Validate Mod 11 for Bulgarian EIK
           function isValidEik(eikStr) {
