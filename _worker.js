@@ -241,8 +241,10 @@ JSON Schema:
           const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
           let parsed = JSON.parse(rawText);
 
-          // Auto-enrich vendor from CompanyBook API if EIK is missing
-          if (parsed.vendorName && !parsed.vendorTaxId) {
+          // Auto-enrich vendor from CompanyBook API if EIK is missing or invalid
+          const cleanVendorEik = (parsed.vendorTaxId || '').replace(/\D/g, '');
+          const isInvalidVendorEik = cleanVendorEik.length !== 9 && cleanVendorEik.length !== 13;
+          if (parsed.vendorName && isInvalidVendorEik) {
             try {
               const cbKey = env.COMPANYBOOK_API_KEY || COMPANYBOOK_API_KEY;
               const cleanQ = parsed.vendorName.replace(/[\"\'\(\)\.]/g, '').trim();
@@ -254,8 +256,8 @@ JSON Schema:
                 const match = cbJson.results?.[0];
                 if (match && match.uic) {
                   parsed.vendorTaxId = match.uic;
-                  parsed.vendorVatId = match.vatRegistered ? `BG${match.uic}` : parsed.vendorVatId || `BG${match.uic}`;
-                  if (!parsed.vendorName || parsed.vendorName.length < 4) {
+                  parsed.vendorVatId = `BG${match.uic}`;
+                  if (match.name) {
                     parsed.vendorName = match.name;
                   }
                 }
@@ -265,8 +267,10 @@ JSON Schema:
             }
           }
 
-          // Auto-enrich customer from CompanyBook API if EIK is missing
-          if (parsed.customerName && !parsed.customerTaxId) {
+          // Auto-enrich customer from CompanyBook API if EIK is missing or invalid
+          const cleanCustomerEik = (parsed.customerTaxId || '').replace(/\D/g, '');
+          const isInvalidCustomerEik = cleanCustomerEik.length !== 9 && cleanCustomerEik.length !== 13;
+          if (parsed.customerName && isInvalidCustomerEik) {
             try {
               const cbKey = env.COMPANYBOOK_API_KEY || COMPANYBOOK_API_KEY;
               const cleanQ = parsed.customerName.replace(/[\"\'\(\)\.]/g, '').trim();
@@ -278,7 +282,7 @@ JSON Schema:
                 const match = cbJson.results?.[0];
                 if (match && match.uic) {
                   parsed.customerTaxId = match.uic;
-                  parsed.customerVatNumber = match.vatRegistered ? `BG${match.uic}` : parsed.customerVatNumber || `BG${match.uic}`;
+                  parsed.customerVatNumber = `BG${match.uic}`;
                 }
               }
             } catch {}
