@@ -172,17 +172,16 @@ export default {
           }
 
           const geminiApiKey = env.GEMINI_API_KEY || "AIzaSyCjXAkJaMWgFrIST3so_VjppaiB0BOjE2c";
-          const extractionPrompt = `You are an expert Bulgarian and European invoice data extraction engine.
-Analyze this invoice image thoroughly and extract ALL fields with maximum precision.
-Rules:
-1. Vendor/Supplier: Extract legal company name (e.g. ТЕДИ ТЕКСТИЛ ЕООД, ТЕКС ХАУС ЕООД), 9 or 13 digit EIK/BULSTAT (vendorTaxId), and VAT ID (e.g. BG131464972).
-2. Customer/Buyer: Extract buyer company or person name, customerTaxId, customerVatNumber, customerAddress.
-3. Document numbers: Extract the exact invoice number (invoiceNumber, e.g. 1000293849, FP-2026-0041). NEVER use company words as invoice numbers.
-4. Dates: invoiceDate (YYYY-MM-DD), dueDate (YYYY-MM-DD).
-5. Banking: IBAN (BG...).
-6. Amounts: subtotal (number), taxAmount (number), totalAmount (number), currency (BGN, EUR, USD).
-7. Items: array of itemized goods/services with description, quantity, unit (бр., кг, etc.), unitPrice, totalPrice, vatRate (20, 9, 0).
-8. Return ONLY valid JSON adhering strictly to the schema below.
+          const extractionPrompt = `You are an expert Bulgarian OCR and invoice data extraction engine.
+Analyze this document image with extreme attention to authentic detail.
+CRITICAL INSTRUCTIONS:
+1. Extract strictly the exact, real text and numbers visibly printed on the document. Do NOT invent, assume, or substitute names, EIKs, IBANs, or amounts.
+2. If there are multiple documents (e.g. an A4 invoice sheet with a smaller thermal cash receipt / фискален бон attached on top):
+   - Extract the primary Invoice fields (Доставчик, Получател, ЕИК, IBAN, Номер, Дата, Таблица с артикули, Обща сума).
+   - If the supplier or receipt shows a store/brand (e.g. TERRANOVA / ТЕРРАНОВА БЪЛГАРИЯ, ТЕКС ХАУС, etc.), extract the exact printed vendorName and its authentic EIK printed on the document/receipt.
+3. Check both "Доставчик" and "Получател" (e.g. ЕТО РИТА ЕВТИМ ГЕОРГ, ОПА БИЛД ЕООД) boxes accurately.
+4. Extract all line items in the table with exact quantities, units, and amounts.
+5. If a field is not present or obscured, set it to null.
 
 JSON Schema:
 {
@@ -242,12 +241,7 @@ JSON Schema:
           const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
           let parsed = JSON.parse(rawText);
 
-          // Brand and VAT harmonization for Bulgarian accounting
-          if (parsed.vendorName && /TERRANOVA/i.test(parsed.vendorName) && !parsed.vendorTaxId) {
-            parsed.vendorTaxId = '131464972';
-            parsed.vendorVatId = 'BG131464972';
-          }
-          if (parsed.vendorTaxId && !parsed.vendorVatId) {
+          if (parsed.vendorTaxId && !parsed.vendorVatId && /^\d{9,10}$/.test(parsed.vendorTaxId)) {
             parsed.vendorVatId = `BG${parsed.vendorTaxId}`;
           }
 
