@@ -227,7 +227,8 @@ JSON Schema:
               }],
               generationConfig: {
                 responseMimeType: 'application/json',
-                temperature: 0.0
+                temperature: 0.0,
+                maxOutputTokens: 1024
               }
             })
           });
