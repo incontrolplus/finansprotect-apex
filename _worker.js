@@ -228,7 +228,10 @@ JSON Schema:
               generationConfig: {
                 responseMimeType: 'application/json',
                 temperature: 0.0,
-                maxOutputTokens: 1024
+                maxOutputTokens: 1024,
+                thinkingConfig: {
+                  thinkingBudget: 0
+                }
               }
             })
           });
