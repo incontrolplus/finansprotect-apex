@@ -378,14 +378,21 @@ Schema:
       }
     }
 
-    // 5. Static Assets Fetch with Strict Security & Cache-Control Headers
-    const response = await env.ASSETS.fetch(request);
+    // 5. Subdomain Routing: Map dashboard.finansprotect.com directly to /dashboard/
+    let assetRequest = request;
+    if (url.hostname.startsWith('dashboard.') && (url.pathname === '/' || url.pathname === '')) {
+      const dashUrl = new URL('/dashboard/index.html', request.url);
+      assetRequest = new Request(dashUrl, request);
+    }
+
+    // 6. Static Assets Fetch with Strict Security & Cache-Control Headers
+    const response = await env.ASSETS.fetch(assetRequest);
     const headers = new Headers(response.headers);
     headers.set('Access-Control-Allow-Origin', '*');
 
     // Prevent caching on HTML shells
     const contentType = headers.get('Content-Type') || '';
-    if (contentType.includes('text/html') || url.pathname.endsWith('.html') || url.pathname === '/' || url.pathname.startsWith('/app')) {
+    if (contentType.includes('text/html') || url.pathname.endsWith('.html') || url.pathname === '/' || url.pathname.startsWith('/app') || url.pathname.startsWith('/dashboard')) {
       headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 
