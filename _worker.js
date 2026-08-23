@@ -241,10 +241,39 @@ JSON Schema:
           const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
           let parsed = JSON.parse(rawText);
 
-          // Auto-enrich vendor from CompanyBook API if EIK is missing or invalid
+          // Validate Mod 11 for Bulgarian EIK
+          function isValidEik(eikStr) {
+            if (!eikStr) return false;
+            const d = eikStr.replace(/\D/g, '');
+            if (d.length !== 9 && d.length !== 13) return false;
+            let sum = 0;
+            for (let i = 0; i < 8; i++) sum += parseInt(d[i], 10) * (i + 1);
+            let rem = sum % 11;
+            if (rem === 10) {
+              sum = 0;
+              for (let i = 0; i < 8; i++) sum += parseInt(d[i], 10) * (i + 3);
+              rem = sum % 11;
+              if (rem === 10) rem = 0;
+            }
+            if (rem !== parseInt(d[8], 10)) return false;
+            if (d.length === 9) return true;
+            const w1 = [2, 7, 3, 5, 1, 4, 1, 2, 7, 3, 5, 1];
+            let sum13 = 0;
+            for (let i = 0; i < 12; i++) sum13 += parseInt(d[i], 10) * w1[i];
+            let rem13 = sum13 % 11;
+            if (rem13 === 10) {
+              const w2 = [4, 9, 5, 7, 3, 6, 2, 4, 9, 5, 7, 3];
+              sum13 = 0;
+              for (let i = 0; i < 12; i++) sum13 += parseInt(d[i], 10) * w2[i];
+              rem13 = sum13 % 11;
+              if (rem13 === 10) rem13 = 0;
+            }
+            return rem13 === parseInt(d[12], 10);
+          }
+
+          // Auto-enrich vendor from CompanyBook API if EIK is missing or fails Mod 11
           const cleanVendorEik = (parsed.vendorTaxId || '').replace(/\D/g, '');
-          const isInvalidVendorEik = cleanVendorEik.length !== 9 && cleanVendorEik.length !== 13;
-          if (parsed.vendorName && isInvalidVendorEik) {
+          if (parsed.vendorName && !isValidEik(cleanVendorEik)) {
             try {
               const cbKey = env.COMPANYBOOK_API_KEY || COMPANYBOOK_API_KEY;
               const cleanQ = parsed.vendorName.replace(/[\"\'\(\)\.]/g, '').trim();
@@ -267,10 +296,9 @@ JSON Schema:
             }
           }
 
-          // Auto-enrich customer from CompanyBook API if EIK is missing or invalid
+          // Auto-enrich customer from CompanyBook API if EIK is missing or fails Mod 11
           const cleanCustomerEik = (parsed.customerTaxId || '').replace(/\D/g, '');
-          const isInvalidCustomerEik = cleanCustomerEik.length !== 9 && cleanCustomerEik.length !== 13;
-          if (parsed.customerName && isInvalidCustomerEik) {
+          if (parsed.customerName && !isValidEik(cleanCustomerEik)) {
             try {
               const cbKey = env.COMPANYBOOK_API_KEY || COMPANYBOOK_API_KEY;
               const cleanQ = parsed.customerName.replace(/[\"\'\(\)\.]/g, '').trim();
