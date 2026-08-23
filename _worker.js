@@ -213,7 +213,7 @@ JSON Schema:
 }`;
 
           const mediaType = imageType.includes('png') ? 'image/png' : imageType.includes('webp') ? 'image/webp' : 'image/jpeg';
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiApiKey}`;
 
           const geminiResp = await fetch(geminiUrl, {
             method: 'POST',
@@ -227,11 +227,7 @@ JSON Schema:
               }],
               generationConfig: {
                 responseMimeType: 'application/json',
-                temperature: 0.0,
-                maxOutputTokens: 1024,
-                thinkingConfig: {
-                  thinkingBudget: 0
-                }
+                temperature: 0.0
               }
             })
           });
@@ -244,6 +240,49 @@ JSON Schema:
           const geminiData = await geminiResp.json();
           const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
           let parsed = JSON.parse(rawText);
+
+          // Auto-enrich vendor from CompanyBook API if EIK is missing
+          if (parsed.vendorName && !parsed.vendorTaxId) {
+            try {
+              const cbKey = env.COMPANYBOOK_API_KEY || COMPANYBOOK_API_KEY;
+              const cleanQ = parsed.vendorName.replace(/[\"\'\(\)\.]/g, '').trim();
+              const cbRes = await fetch(`https://api.companybook.bg/api/v2/companies/search?name=${encodeURIComponent(cleanQ)}`, {
+                headers: { 'X-API-Key': cbKey, 'Accept': 'application/json' }
+              });
+              if (cbRes.ok) {
+                const cbJson = await cbRes.json();
+                const match = cbJson.results?.[0];
+                if (match && match.uic) {
+                  parsed.vendorTaxId = match.uic;
+                  parsed.vendorVatId = match.vatRegistered ? `BG${match.uic}` : parsed.vendorVatId || `BG${match.uic}`;
+                  if (!parsed.vendorName || parsed.vendorName.length < 4) {
+                    parsed.vendorName = match.name;
+                  }
+                }
+              }
+            } catch (cbErr) {
+              console.warn('CompanyBook enrichment skipped:', cbErr);
+            }
+          }
+
+          // Auto-enrich customer from CompanyBook API if EIK is missing
+          if (parsed.customerName && !parsed.customerTaxId) {
+            try {
+              const cbKey = env.COMPANYBOOK_API_KEY || COMPANYBOOK_API_KEY;
+              const cleanQ = parsed.customerName.replace(/[\"\'\(\)\.]/g, '').trim();
+              const cbRes = await fetch(`https://api.companybook.bg/api/v2/companies/search?name=${encodeURIComponent(cleanQ)}`, {
+                headers: { 'X-API-Key': cbKey, 'Accept': 'application/json' }
+              });
+              if (cbRes.ok) {
+                const cbJson = await cbRes.json();
+                const match = cbJson.results?.[0];
+                if (match && match.uic) {
+                  parsed.customerTaxId = match.uic;
+                  parsed.customerVatNumber = match.vatRegistered ? `BG${match.uic}` : parsed.customerVatNumber || `BG${match.uic}`;
+                }
+              }
+            } catch {}
+          }
 
           if (parsed.vendorTaxId && !parsed.vendorVatId && /^\d{9,10}$/.test(parsed.vendorTaxId)) {
             parsed.vendorVatId = `BG${parsed.vendorTaxId}`;
