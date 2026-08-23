@@ -172,18 +172,20 @@ export default {
           }
 
           const geminiApiKey = env.GEMINI_API_KEY || "AIzaSyCjXAkJaMWgFrIST3so_VjppaiB0BOjE2c";
-          const extractionPrompt = `You are an expert Bulgarian OCR and invoice data extraction engine.
-Analyze this document image with extreme attention to authentic detail.
+          const extractionPrompt = `You are an expert Bulgarian document extraction engine.
+Examine this image containing an invoice document.
 CRITICAL INSTRUCTIONS:
-1. Extract strictly the exact, real text and numbers visibly printed on the document. Do NOT invent, assume, or substitute names, EIKs, IBANs, or amounts.
-2. If there are multiple documents (e.g. an A4 invoice sheet with a smaller thermal cash receipt / фискален бон attached on top):
-   - Extract the primary Invoice fields (Доставчик, Получател, ЕИК, IBAN, Номер, Дата, Таблица с артикули, Обща сума).
-   - If the supplier or receipt shows a store/brand (e.g. TERRANOVA / ТЕРРАНОВА БЪЛГАРИЯ, ТЕКС ХАУС, etc.), extract the exact printed vendorName and its authentic EIK printed on the document/receipt.
-3. Check both "Доставчик" and "Получател" (e.g. ЕТО РИТА ЕВТИМ ГЕОРГ, ОПА БИЛД ЕООД) boxes accurately.
-4. Extract all line items in the table with exact quantities, units, and amounts.
-5. If a field is not present or obscured, set it to null.
+1. Extract authentic visible fields:
+   - Buyer / Customer (Получател: Company/Person name, EIK/BULSTAT, VAT, Address, City).
+   - Supplier / Vendor (Доставчик: Company name, EIK, VAT, Address).
+   - Document Numbers: invoiceNumber, invoiceDate (YYYY-MM-DD), dueDate.
+   - Payment: IBAN, Bank.
+   - Line Items: Read the exact service or goods descriptions printed on the invoice table or receipt (e.g. 'Услуга: абонаментно обслужване...').
+   - Totals: subtotal, taxAmount (ДДС), totalAmount, currency.
+2. STRICT ZERO-HALLUCINATION: If a field is illegible or not present, set it to null and items to []. NEVER invent dresses, pants, or dummy placeholder numbers.
+3. Return valid JSON.
 
-JSON Schema:
+Schema:
 {
   "invoiceNumber": "string or null",
   "invoiceDate": "YYYY-MM-DD or null",
@@ -213,7 +215,7 @@ JSON Schema:
 }`;
 
           const mediaType = imageType.includes('png') ? 'image/png' : imageType.includes('webp') ? 'image/webp' : 'image/jpeg';
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiApiKey}`;
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${geminiApiKey}`;
 
           const geminiResp = await fetch(geminiUrl, {
             method: 'POST',
