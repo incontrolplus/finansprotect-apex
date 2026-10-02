@@ -1,7 +1,7 @@
 {
   "name": "Finans Protect",
   "short_name": "Finans Protect",
-  "description": "Дигитален служител за фактури — AI OCR и счетоводна автоматизация за България.",
+  "description": "Финансова Защита ЕООД — Корпоративни, правни и счетоводни услуги за бизнеса.",
   "lang": "bg",
   "dir": "ltr",
   "start_url": "/",
@@ -9,9 +9,10 @@
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F8FAFC",
-  "theme_color": "#153E75",
-  "categories": ["business", "finance", "productivity"],
+  "theme_color": "#0B1F3A",
+  "categories": ["business", "finance", "legal"],
   "icons": [
+    { "src": "/brand/png/favicon-48.png", "sizes": "48x48", "type": "image/png" },
     { "src": "/brand/png/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/brand/png/icon-512.png", "sizes": "512x512", "type": "image/png" },
     { "src": "/brand/png/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
